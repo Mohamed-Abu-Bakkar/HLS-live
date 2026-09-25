@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const hotelRoutes = require('./routes/hotelRoutes');
+const { pool } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,7 +44,8 @@ async function startServerWithRetry(maxRetries = 5, delayMs = 3000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Connecting to database (attempt ${attempt}/${maxRetries})...`);
-      console.log('Database initialized and seeded successfully.');
+      await pool.query('SELECT 1');
+      console.log('Database connection established.');
       break;
     } catch (err) {
       console.error(`Database connection attempt ${attempt} failed:`, err.message);
