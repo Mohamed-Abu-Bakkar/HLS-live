@@ -1,0 +1,77 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hotel_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-hotel_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hotel_password}
+      POSTGRES_DB: ${DB_NAME:-hotel_db}
+    ports:
+      - "5435:5432"
+    volumes:
+      - hotel_postgres_data:/var/lib/postgresql/data
+      - ./HLS-backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hotel_user} -d ${DB_NAME:-hotel_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hotel-network
+
+  backend:
+    build:
+      context: ./HLS-backend
+      dockerfile: Dockerfile
+    container_name: hotel_backend_api
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-hotel_user}
+      DB_PASSWORD: ${DB_PASSWORD:-hotel_password}
+      DB_NAME: ${DB_NAME:-hotel_db}
+      CLIENT_URL: ${CLIENT_URL:-http://hotellisting.mohamedabu.me}
+    ports:
+      - "5000:5000"
+    volumes:
+      - hotel_uploads:/app/src/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - hotel-network
+
+  frontend:
+    profiles: ["frontend"]
+    build:
+      context: ./HLS-frontend
+      dockerfile: Dockerfile
+    container_name: hotel_frontend_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - hotel-network
+
+volumes:
+  hotel_postgres_data:
+    name: hotel_postgres_data
+  hotel_uploads:
+    name: hotel_uploads
+
+networks:
+  hotel-network:
+    name: hotel-network
+    driver: bridge
