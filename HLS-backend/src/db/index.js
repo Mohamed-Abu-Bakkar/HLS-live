@@ -2,16 +2,22 @@ const { Pool } = require('pg');
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  user: process.env.DB_USER || 'hotel_user',
-  password: process.env.DB_PASSWORD || 'hotel_password',
-  database: process.env.DB_NAME || 'hotel_db',
+const poolOptions = {
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-});
+};
+
+const pool = process.env.DATABASE_URL
+  ? new Pool({ ...poolOptions, connectionString: process.env.DATABASE_URL })
+  : new Pool({
+      ...poolOptions,
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER || 'hotel_user',
+      password: process.env.DB_PASSWORD || 'hotel_password',
+      database: process.env.DB_NAME || 'hotel_db',
+    });
 
 pool.on('connect', () => {
   console.log('Connected to PostgreSQL database');
