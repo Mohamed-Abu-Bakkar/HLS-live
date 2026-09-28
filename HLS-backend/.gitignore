@@ -1,0 +1,18 @@
+.neon
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
