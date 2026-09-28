@@ -3,13 +3,20 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
 const poolOptions = {
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  max: 5,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 15000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 30000,
+  allowExitOnIdle: true,
 };
 
-const pool = process.env.DATABASE_URL
-  ? new Pool({ ...poolOptions, connectionString: process.env.DATABASE_URL })
+const connectionString = process.env.DATABASE_URL
+  ? process.env.DATABASE_URL.replace(/sslmode=require/, 'sslmode=verify-full')
+  : undefined;
+
+const pool = connectionString
+  ? new Pool({ ...poolOptions, connectionString })
   : new Pool({
       ...poolOptions,
       host: process.env.DB_HOST || 'localhost',
