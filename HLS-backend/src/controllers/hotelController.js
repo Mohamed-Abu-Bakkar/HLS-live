@@ -113,9 +113,14 @@ const getHotels = async (req, res) => {
   let paramIndex = 1;
 
   if (search) {
-    conditions.push(`title ILIKE $${paramIndex}`);
-    values.push(`%${search}%`);
-    paramIndex++;
+    const searchWords = search.trim().split(/\s+/).filter((w) => w.length > 0);
+    if (searchWords.length > 0) {
+      searchWords.forEach((w, i) => {
+        conditions.push(`title ILIKE $${paramIndex + i}`);
+        values.push(`%${w}%`);
+      });
+      paramIndex += searchWords.length;
+    }
   }
 
   if (minPrice) {
@@ -134,7 +139,17 @@ const getHotels = async (req, res) => {
     const whereClause = ' WHERE ' + conditions.join(' AND ');
     query += whereClause;
     countQuery += whereClause;
+  } else if (search) {
+    const searchWords = search.trim().split(/\s+/).filter((w) => w.length > 0);
+    if (searchWords.length > 0) {
+      const orConditions = searchWords.map((w, i) => `title ILIKE $${paramIndex + i}`);
+      const searchValues = searchWords.map((w) => `%${w}%`);
+      query += ` WHERE ` + orConditions.join(' OR ');
+      values.push(...searchValues);
+      paramIndex += searchWords.length;
+    }
   }
+
 
   query += ` ORDER BY created_at DESC OFFSET $${paramIndex} LIMIT $${paramIndex + 1}`;
   values.push(parseInt(offset), parseInt(limit));
