@@ -1,16 +1,55 @@
-# React + Vite
+# HLS Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite single-page app for the Hotel Listing System. Talks to the Express API in `../HLS-backend` over `/api` and provides hotel search, CRUD flows, image uploads, and a Leaflet location map.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 18+
+- pnpm
+- Backend API running on `http://localhost:5000` (see `../HLS-backend`)
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+pnpm install
+pnpm dev
+```
 
-## Expanding the ESLint configuration
+The dev server starts on http://localhost:3000 with HMR. Requests to `/api` and `/uploads` are proxied to `http://localhost:5000` (configured in `vite.config.js`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Scripts
+
+| Command        | Description                              |
+| -------------- | ---------------------------------------- |
+| `pnpm dev`     | Start the dev server with HMR (port 3000) |
+| `pnpm build`   | Production build into `dist/`            |
+| `pnpm preview` | Serve the production build locally       |
+
+## Environment
+
+| Variable       | Description                       | Default                          |
+| -------------- | --------------------------------- | -------------------------------- |
+| `VITE_API_URL` | API base URL prefix               | `''` (same origin, uses proxy)   |
+
+## Production / Docker
+
+The `Dockerfile` builds the app and serves it with `prod-server.js`, a small Node server that serves `dist/` with SPA fallback and proxies `/api` and `/uploads` to the backend.
+
+```bash
+docker build -t hls-frontend ./HLS-frontend
+docker run -p 3000:3000 -e BACKEND_HOST=backend -e BACKEND_PORT=5000 hls-frontend
+```
+
+To start the whole stack (database, backend, frontend), run `docker compose up -d` from the repository root.
+
+## Project structure
+
+```
+src/
+├── api/hotelApi.js          Axios client for /api/hotels
+├── features/hotelSlice.js   Redux Toolkit slice + async thunks
+├── store/store.js           Redux store
+├── components/              Navbar, HotelCard, SearchFilter, HotelForm, HotelMap, Pagination, modals
+├── pages/                   List, detail, add, and edit pages
+└── styles/main.css          Theme tokens and component styles
+```
