@@ -12,6 +12,9 @@ node_modules/
 dist/
 build/
 
+# Vercel
+.vercel/
+
 # OS metadata
 .DS_Store
 Thumbs.db
