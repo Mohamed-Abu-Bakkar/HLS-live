@@ -1,25 +1,21 @@
 const { pool } = require('../db');
 const { validationResult } = require('express-validator');
-const fs = require('fs');
-const path = require('path');
+const { putImage, deleteImage } = require('../storage');
 
 const createHotel = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { title, description, latitude, longitude, price } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
 
-  if (!image) {
+  if (!req.file) {
     return res.status(400).json({ errors: [{ msg: 'Image is required' }] });
   }
 
   try {
+    const image = await putImage(req.file.buffer, req.file.originalname, req.file.mimetype);
     const result = await pool.query(
       `INSERT INTO hotels (image_url, title, description, latitude, longitude, price)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -35,9 +31,6 @@ const createHotel = async (req, res) => {
 const updateHotel = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -50,11 +43,10 @@ const updateHotel = async (req, res) => {
       return res.status(404).json({ error: 'Hotel not found' });
     }
 
-    let image = existing.rows[0].image_url;
-    let oldImage = null;
+    const previousImage = existing.rows[0].image_url;
+    let image = previousImage;
     if (req.file) {
-      oldImage = image;
-      image = `/uploads/${req.file.filename}`;
+      image = await putImage(req.file.buffer, req.file.originalname, req.file.mimetype);
     }
 
     const result = await pool.query(
@@ -64,11 +56,8 @@ const updateHotel = async (req, res) => {
       [image, title, description, latitude, longitude, price, id]
     );
 
-    if (oldImage && oldImage.startsWith('/uploads/')) {
-      const oldImagePath = path.join(__dirname, '../uploads', path.basename(oldImage));
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
+    if (image !== previousImage) {
+      await deleteImage(previousImage);
     }
 
     res.json(result.rows[0]);
@@ -88,14 +77,10 @@ const deleteHotel = async (req, res) => {
     }
 
     const image = existing.rows[0].image_url;
-    if (image && image.startsWith('/uploads/')) {
-      const imagePath = path.join(__dirname, '../uploads', path.basename(image));
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-    }
 
     await pool.query('DELETE FROM hotels WHERE id = $1', [id]);
+    await deleteImage(image);
+
     res.json({ message: 'Hotel deleted successfully' });
   } catch (error) {
     console.error('Error deleting hotel:', error);
