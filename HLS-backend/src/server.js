@@ -8,14 +8,15 @@ const { pool } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL;
+const origins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-app.use(cors(CLIENT_URL ? { origin: CLIENT_URL } : {}));
+app.use(cors(origins.length > 0 ? { origin: origins } : {}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'hotel-backend', timestamp: new Date().toISOString() });
@@ -63,4 +64,8 @@ async function startServerWithRetry(maxRetries = 5, delayMs = 3000) {
 
 }
 
-startServerWithRetry();
+module.exports = app;
+
+if (require.main === module) {
+  startServerWithRetry();
+}
